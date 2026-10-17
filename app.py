@@ -62,7 +62,8 @@ db = client["hongkong_cl_wa_bot_db"]
 users_col = db["users"]
 settings_col = db["settings"]
 deposits_col = db["pending_deposits"]
-daily_stats_col = db["daily_stats"]  # নতুন কালেকশন ডেইলি স্ট্যাটস এর জন্য
+daily_stats_col = db["daily_stats"]  
+daily_sub_stats_col = db["daily_sub_stats"]  # নতুন কালেকশন ডেইলি সাবস্ক্রিপশন স্ট্যাটস এর জন্য
 
 # Helper Emoji Generator Function (Telegram Custom Emojis)
 def emoji(emoji_id: str, fallback: str = "✨") -> str:
@@ -203,6 +204,21 @@ def increment_daily_stat(country: str):
         upsert=True
     )
 
+def increment_daily_sub_stat(days: int, amount: float):
+    today_str = get_bd_date_str()
+    day_key = f"sub_{days}_count"
+    daily_sub_stats_col.update_one(
+        {"date": today_str},
+        {
+            "$inc": {
+                day_key: 1,
+                "total_count": 1,
+                "total_amount": amount
+            }
+        },
+        upsert=True
+    )
+
 # Keyboards
 def get_main_keyboard(user_id):
     keyboard = [
@@ -282,7 +298,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not is_bot_active() and not is_admin(user_id):
-        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ by ᴀᴅᴍɪɴ.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
+        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ ʙʏ ᴀᴅᴍɪɴ.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
         return
 
     if not is_subscribed(user_id):
@@ -321,7 +337,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not is_bot_active() and not is_admin(user_id):
-        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ ʙʏ ᴀᴅᴍ𝙸𝙽.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
+        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ ʙʏ ᴀᴅᴍɪɴ.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
         return
 
     if not is_subscribed(user_id):
@@ -538,6 +554,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("➕ ADD BALANCE", callback_data="admin_add_bal"), InlineKeyboardButton("🧹 ZERO BALANCE", callback_data="admin_zero_bal")],
             [InlineKeyboardButton("🧹 ZERO ALL BALANCES", callback_data="admin_zero_all_bal")],
             [InlineKeyboardButton("📊 VIEW USERS", callback_data="admin_view_users"), InlineKeyboardButton("📈 DAILY STATS", callback_data="admin_daily_stats")],
+            [InlineKeyboardButton("💰 SUBSCRIPTION STATS", callback_data="admin_sub_stats")],
             [InlineKeyboardButton("⚙️ SET CHILE RATE", callback_data="admin_set_rate_cl"), InlineKeyboardButton("⚙️ SET HK RATE", callback_data="admin_set_rate_hk")],
             [InlineKeyboardButton("💥 RESET ALL SUBSCRIPTIONS", callback_data="admin_reset_all_subs")],
             [InlineKeyboardButton(f"🤖 BOT STATUS: {status_text}", callback_data="admin_toggle_bot")],
@@ -595,6 +612,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
                 [InlineKeyboardButton("➕ ADD BALANCE", callback_data="admin_add_bal"), InlineKeyboardButton("🧹 ZERO BALANCE", callback_data="admin_zero_bal")],
                 [InlineKeyboardButton("🧹 ZERO ALL BALANCES", callback_data="admin_zero_all_bal")],
                 [InlineKeyboardButton("📊 VIEW USERS", callback_data="admin_view_users"), InlineKeyboardButton("📈 DAILY STATS", callback_data="admin_daily_stats")],
+                [InlineKeyboardButton("💰 SUBSCRIPTION STATS", callback_data="admin_sub_stats")],
                 [InlineKeyboardButton("⚙️ SET CHILE RATE", callback_data="admin_set_rate_cl"), InlineKeyboardButton("⚙️ SET HK RATE", callback_data="admin_set_rate_hk")],
                 [InlineKeyboardButton("💥 RESET ALL SUBSCRIPTIONS", callback_data="admin_reset_all_subs")],
                 [InlineKeyboardButton(f"🤖 BOT STATUS: {status_text}", callback_data="admin_toggle_bot")],
@@ -628,6 +646,35 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
 
             await query.message.reply_text(msg, parse_mode="HTML")
 
+        elif data == "admin_sub_stats":
+            stats_cursor = daily_sub_stats_col.find({}).sort("date", -1).limit(10)
+            stats_list = list(stats_cursor)
+
+            if not stats_list:
+                await query.message.reply_text("💰 <b>NO SUBSCRIPTION STATS FOUND YET.</b>", parse_mode="HTML")
+                return
+
+            msg = "💰 <b>DAILY SUBSCRIPTION STATISTICS (BD TIME):</b>\n\n"
+            for st in stats_list:
+                d_date = st.get("date", "N/A")
+                c_3 = st.get("sub_3_count", 0)
+                c_15 = st.get("sub_15_count", 0)
+                c_30 = st.get("sub_30_count", 0)
+                tot_count = st.get("total_count", 0)
+                tot_amt = st.get("total_amount", 0.0)
+
+                msg += (
+                    f"📅 <b>Date:</b> <code>{d_date}</code>\n"
+                    f"🔥 <b>৩ দিন (২০৳):</b> <code>{c_3}</code> Pcs\n"
+                    f"🔥 <b>১৫ দিন (১০০৳):</b> <code>{c_15}</code> Pcs\n"
+                    f"🔥 <b>৩০ দিন (১৭০৳):</b> <code>{c_30}</code> Pcs\n"
+                    f"📊 <b>Total Sold:</b> <code>{tot_count}</code> Pcs\n"
+                    f"💵 <b>Total Amount:</b> <code>{tot_amt:.2f}</code> BDT\n"
+                    f"----------------------------\n"
+                )
+
+            await query.message.reply_text(msg, parse_mode="HTML")
+
         elif data == "admin_zero_all_bal":
             users_col.update_many({}, {"$set": {"balance": 0.0}})
             await query.message.reply_text("🧹 <b>SUCCESS! ALL USERS' BALANCES HAVE BEEN RESET TO 0.00 USDT.</b>", parse_mode="HTML")
@@ -644,16 +691,42 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
                 await query.message.reply_text("📋 <b>NO USERS FOUND.</b>", parse_mode="HTML")
                 return
 
-            text_msg = f"📊 <b>TOTAL BOT USERS:</b> <code>{total_users}</code>\n\n"
+            sub_3_users = []
+            sub_15_users = []
+            sub_30_users = []
+            other_users = []
+
             for u in all_users:
-                text_msg += (
-                    f"👤 <b>Name:</b> {u.get('full_name', 'N/A')}\n"
-                    f"🆔 <b>ID:</b> <code>{u.get('user_id')}</code>\n"
-                    f"💰 <b>Balance:</b> <code>{u.get('balance', 0.0):.4f}</code> USDT\n"
-                    f"📥 <b>OTP Bought:</b> <code>{u.get('otp_count', 0)}</code>\n"
-                    f"🚫 <b>Status:</b> {'Banned' if u.get('is_banned') else 'Active'}\n"
-                    f"----------------------------\n"
-                )
+                days = u.get("sub_days")
+                if is_subscribed(u.get("user_id")):
+                    if days == 3:
+                        sub_3_users.append(u)
+                    elif days == 15:
+                        sub_15_users.append(u)
+                    elif days == 30:
+                        sub_30_users.append(u)
+                    else:
+                        other_users.append(u)
+                else:
+                    other_users.append(u)
+
+            text_msg = f"📊 <b>TOTAL BOT USERS:</b> <code>{total_users}</code>\n\n"
+
+            def format_user_list(title, u_list):
+                if not u_list:
+                    return ""
+                res = f"<b>{title} ({len(u_list)} Users):</b>\n"
+                for u in u_list:
+                    res += (
+                        f"• {u.get('full_name', 'N/A')} (ID: <code>{u.get('user_id')}</code>)\n"
+                        f"  Bal: <code>{u.get('balance', 0.0):.4f}</code> USDT | OTP: <code>{u.get('otp_count', 0)}</code>\n"
+                    )
+                return res + "\n"
+
+            text_msg += format_user_list("🔥 ৩ দিনের সাবস্ক্রিপশন ব্যবহারকারী", sub_3_users)
+            text_msg += format_user_list("🔥 ১৫ দিনের সাবস্ক্রিপশন ব্যবহারকারী", sub_15_users)
+            text_msg += format_user_list("🔥 ৩০ দিনের সাবস্ক্রিপশন ব্যবহারকারী", sub_30_users)
+            text_msg += format_user_list("📌 অন্যান্য / মেয়াদোত্তীর্ণ ব্যবহারকারী", other_users)
 
             if len(text_msg) > 4000:
                 for i in range(0, len(text_msg), 4000):
@@ -1079,6 +1152,10 @@ async def handle_sub_approval_callbacks(update: Update, context: ContextTypes.DE
         expiry_date = get_bd_time().replace(tzinfo=None) + timedelta(days=days)
         users_col.update_one({"user_id": target_id}, {"$set": {"subscription_expiry": expiry_date}})
         
+        # সাবস্ক্রিপশন স্ট্যাটস এবং এমাউন্ট আপডেট (৩ দিন = ২০৳, ১৫ দিন = ১০০৳, ৩০ দিন = ১৭০৳)
+        price_val = 20.0 if days == 3 else (100.0 if days == 15 else 170.0)
+        increment_daily_sub_stat(days, price_val)
+
         exp_str = expiry_date.strftime("%Y-%m-%d %H:%M")
 
         try:
