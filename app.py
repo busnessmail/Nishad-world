@@ -48,7 +48,7 @@ ADMIN_IDS_RAW = os.getenv("ADMIN_IDS", "123456789")
 ADMIN_IDS = [int(x.strip()) for x in ADMIN_IDS_RAW.split(",") if x.strip().isdigit()]
 
 OTP_GROUP_ID = os.getenv("OTP_GROUP_ID")
-BINANCE_ID = os.getenv("BINANCE_ID", "1102671249")
+BINANCE_ID = os.getenv("BINANCE_ID", "1102671200")
 MONGODB_URI = os.getenv("MONGODB_URI")
 
 # MongoDB Setup
