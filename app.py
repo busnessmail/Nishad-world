@@ -49,6 +49,8 @@ ADMIN_IDS = [int(x.strip()) for x in ADMIN_IDS_RAW.split(",") if x.strip().isdig
 
 OTP_GROUP_ID = os.getenv("OTP_GROUP_ID")
 BINANCE_ID = os.getenv("BINANCE_ID", "1102671200")
+# পেমেন্টের জন্য বিকাশ ও নগদ নম্বর
+PAYMENT_NUMBER = os.getenv("PAYMENT_NUMBER", "01XXXXXXXXX") 
 MONGODB_URI = os.getenv("MONGODB_URI")
 
 # MongoDB Setup
@@ -144,7 +146,7 @@ def get_or_create_user(user_id: int, full_name: str = "User"):
             "selected_service": "wa",
             "is_banned": False,
             "subscription_expiry": None,
-            "sub_days": 5
+            "sub_days": 3
         }
         users_col.insert_one(user_data)
         return user_data
@@ -280,21 +282,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not is_bot_active() and not is_admin(user_id):
-        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ ʙʏ ᴀᴅᴍɪɴ.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
+        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ by ᴀᴅᴍɪɴ.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
         return
 
     if not is_subscribed(user_id):
         sub_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💛 5 Days (0.50 USDT)", callback_data="buy_sub_5")],
-            [InlineKeyboardButton("💛 7 Days (0.70 USDT)", callback_data="buy_sub_7")]
+            [InlineKeyboardButton("🔥 ৩ দিন = ২০ টাকা", callback_data="buy_sub_3")],
+            [InlineKeyboardButton("🔥 ১৫ দিন = ১০০ টাকা", callback_data="buy_sub_15")],
+            [InlineKeyboardButton("🔥 ৩০ দিন = ১৭০ টাকা", callback_data="buy_sub_30")]
         ])
         msg = (
             f"👋 Hello {user.full_name}!\n\n"
             f"{E_BAN} <b>YOU DO NOT HAVE AN ACTIVE SUBSCRIPTION!</b> {E_SUB_EXP}\n"
             f"Bot bebohar korte chaile subscription nite hobe.\n\n"
-            f"📌 PRICE & VALIDITY (Binance Pay):\n"
-            f"• 5 Days = 0.50 USDT\n"
-            f"• 7 Days = 0.70 USDT\n\n"
+            f"📌 SUBSCRIPTION PLANS (Bkash / Nagad):\n"
+            f"• ৩ দিন = ২০ টাকা\n"
+            f"• ১৫ দিন = ১০০ টাকা\n"
+            f"• ৩০ দিন = ১৭০ টাকা\n\n"
             f"Nicher button-e click kore subscription kinun:"
         )
         await update.message.reply_text(msg, parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
@@ -303,7 +307,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     welcome_msg = (
         f"👋 <b>𝚆𝙴𝙻𝙲𝙾𝙼𝙴 WHATSAPP 𝙱𝙾𝚃!</b> {E_WELCOME}\n\n"
-        f"⚙️ <b>HUNTER ZONE</b> {E_PHONE}"
+        f"⚙️ <b>HUNTER ZONE NUMBER</b> {E_PHONE}"
     )
     await update.message.reply_text(welcome_msg, parse_mode="HTML", reply_markup=get_main_keyboard(user_id))
 
@@ -317,13 +321,14 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not is_bot_active() and not is_admin(user_id):
-        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ ʙʏ ᴀᴅᴍɪɴ.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
+        await update.message.reply_text("🚧 <b>ʙᴏᴛ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴀɪɴɪɴɢ ʙʏ ᴀᴅᴍ𝙸𝙽.</b> ᴘʟᴇᴀsᴇ ᴛʀʏ sᴏᴍᴇ ᴛɪᴍᴇ.", parse_mode="HTML")
         return
 
     if not is_subscribed(user_id):
         sub_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💛 5 Days (0.50 USDT)", callback_data="buy_sub_5")],
-            [InlineKeyboardButton("💛 7 Days (0.70 USDT)", callback_data="buy_sub_7")]
+            [InlineKeyboardButton("🔥 ৩ দিন = ২০ টাকা", callback_data="buy_sub_3")],
+            [InlineKeyboardButton("🔥 ১৫ দিন = ১০০ টাকা", callback_data="buy_sub_15")],
+            [InlineKeyboardButton("🔥 ৩০ দিন = ১৭০ টাকা", callback_data="buy_sub_30")]
         ])
         await update.message.reply_text(f"{E_BAN} <b>SUBSCRIPTION EXPIRED! BUY NEW SUBSCRIPTION.</b>", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
         await update.message.reply_text("👇 <b>BUY SUBSCRIPTION:</b>", parse_mode="HTML", reply_markup=sub_kb)
@@ -686,37 +691,54 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
             await query.message.reply_text("SEND BROADCAST MESSAGE TO ALL USERS:")
             return ADMIN_BROADCAST
 
-# Subscription Purchase Flow Handlers (Binance Pay Based)
-async def sub_start_5(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Subscription Purchase Flow Handlers (Bkash / Nagad Based)
+async def sub_start_3(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
-    users_col.update_one({"user_id": user_id}, {"$set": {"sub_days": 5}})
+    users_col.update_one({"user_id": user_id}, {"$set": {"sub_days": 3}})
     
     cancel_kb = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel_sub_flow")]])
     msg = (
-        f"💛 <b>SUBSCRIPTION PLAN:</b> 5 Days\n"
-        f"💰 <b>AMOUNT:</b> 0.50 USDT\n\n"
-        f"👇 <b>SEND PAYMENT VIA BINANCE PAY:</b>\n"
-        f"🆔 <b>BINANCE PAY ID:</b> <code>{BINANCE_ID}</code> {E_ID}\n\n"
-        f"Payment kora sese apnar TrxID / Order ID-ti likhe pathan:"
+        f"🔥 <b>SUBSCRIPTION PLAN:</b> ৩ দিন\n"
+        f"💰 <b>AMOUNT:</b> ২০ টাকা\n\n"
+        f"👇 <b>SEND PAYMENT VIA BKASH / NAGAD (Send Money):</b>\n"
+        f"📱 <b>NUMBER:</b> <code>{PAYMENT_NUMBER}</code> {E_ID}\n\n"
+        f"Payment kora sese apnar TrxID-ti likhe pathan:"
     )
     await query.message.reply_text(msg, parse_mode="HTML", reply_markup=cancel_kb)
     return SUB_TXID
 
-async def sub_start_7(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def sub_start_15(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
-    users_col.update_one({"user_id": user_id}, {"$set": {"sub_days": 7}})
+    users_col.update_one({"user_id": user_id}, {"$set": {"sub_days": 15}})
     
     cancel_kb = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel_sub_flow")]])
     msg = (
-        f"💛 <b>SUBSCRIPTION PLAN:</b> 7 Days\n"
-        f"💰 <b>AMOUNT:</b> 0.70 USDT\n\n"
-        f"👇 <b>SEND PAYMENT VIA BINANCE PAY:</b>\n"
-        f"🆔 <b>BINANCE PAY ID:</b> <code>{BINANCE_ID}</code> {E_ID}\n\n"
-        f"Payment kora sese apnar TrxID / Order ID-ti likhe pathan:"
+        f"🔥 <b>SUBSCRIPTION PLAN:</b> ১৫ দিন\n"
+        f"💰 <b>AMOUNT:</b> ১০০ টাকা\n\n"
+        f"👇 <b>SEND PAYMENT VIA BKASH / NAGAD (Send Money):</b>\n"
+        f"📱 <b>NUMBER:</b> <code>{PAYMENT_NUMBER}</code> {E_ID}\n\n"
+        f"Payment kora sese apnar TrxID-ti likhe pathan:"
+    )
+    await query.message.reply_text(msg, parse_mode="HTML", reply_markup=cancel_kb)
+    return SUB_TXID
+
+async def sub_start_30(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    users_col.update_one({"user_id": user_id}, {"$set": {"sub_days": 30}})
+    
+    cancel_kb = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel_sub_flow")]])
+    msg = (
+        f"🔥 <b>SUBSCRIPTION PLAN:</b> ৩০ দিন\n"
+        f"💰 <b>AMOUNT:</b> ১৭০ টাকা\n\n"
+        f"👇 <b>SEND PAYMENT VIA BKASH / NAGAD (Send Money):</b>\n"
+        f"📱 <b>NUMBER:</b> <code>{PAYMENT_NUMBER}</code> {E_ID}\n\n"
+        f"Payment kora sese apnar TrxID-ti likhe pathan:"
     )
     await query.message.reply_text(msg, parse_mode="HTML", reply_markup=cancel_kb)
     return SUB_TXID
@@ -733,8 +755,14 @@ async def sub_screenshot_received(update: Update, context: ContextTypes.DEFAULT_
     photo = update.message.photo[-1]
     txid = context.user_data.get("sub_txid")
     user_doc = users_col.find_one({"user_id": user.id})
-    days = user_doc.get("sub_days", 5) if user_doc else 5
-    price_str = f"{0.50 if days == 5 else 0.70} USDT"
+    days = user_doc.get("sub_days", 3) if user_doc else 3
+    
+    if days == 3:
+        price_str = "২০ টাকা"
+    elif days == 15:
+        price_str = "১০০ টাকা"
+    else:
+        price_str = "১৭০ টাকা"
 
     admin_kb = InlineKeyboardMarkup([
         [
@@ -744,9 +772,9 @@ async def sub_screenshot_received(update: Update, context: ContextTypes.DEFAULT_
     ])
 
     caption = (
-        f"🔔 <b>NEW SUBSCRIPTION REQUEST (BINANCE)!</b>\n\n"
+        f"🔔 <b>NEW SUBSCRIPTION REQUEST (BKASH/NAGAD)!</b>\n\n"
         f"👤 <b>USER:</b> {user.full_name} (<code>{user.id}</code>) {E_ID}\n"
-        f"💳 <b>METHOD:</b> BINANCE PAY\n"
+        f"💳 <b>METHOD:</b> BKASH / NAGAD\n"
         f"📅 <b>PLAN:</b> {days} Days {E_SUB_VALID}\n"
         f"💰 <b>AMOUNT:</b> {price_str}\n"
         f"🧾 <b>TrxID:</b> <code>{txid}</code>"
@@ -829,7 +857,7 @@ async def deposit_txid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cancel_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("❌ CANCEL DEPOSIT", callback_data="cancel_deposit")]
     ])
-    await update.message.reply_text("📸 <b>𝚂𝙴𝙽𝙳 𝙰 𝚂𝙲𝚁𝙴𝙴𝙽𝚂𝙷𝙾𝚃 𝙾𝙵 𝚃𝙷𝙴 𝙿𝙰𝚈𝙼𝙴𝙽𝚃:</b>", parse_mode="HTML", reply_markup=cancel_]
+    await update.message.reply_text("📸 <b>𝚂𝙴𝙽𝙳 𝙰 𝚂𝙲𝚁𝙴𝙴𝙽𝚂𝙷𝙾𝚃 𝙾𝙵 𝚃𝙷𝙴 𝙿𝙰𝚈𝙼𝙴𝙽𝚃:</b>", parse_mode="HTML", reply_markup=cancel_kb)
     return WAITING_SCREENSHOT
 
 async def deposit_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1046,7 +1074,7 @@ async def handle_sub_approval_callbacks(update: Update, context: ContextTypes.DE
     if data.startswith("approve_sub_"):
         target_id = int(data.split("_")[2])
         user_doc = users_col.find_one({"user_id": target_id})
-        days = user_doc.get("sub_days", 5) if user_doc else 5
+        days = user_doc.get("sub_days", 3) if user_doc else 3
         
         expiry_date = get_bd_time().replace(tzinfo=None) + timedelta(days=days)
         users_col.update_one({"user_id": target_id}, {"$set": {"subscription_expiry": expiry_date}})
@@ -1071,7 +1099,7 @@ async def handle_sub_approval_callbacks(update: Update, context: ContextTypes.DE
     elif data.startswith("reject_sub_"):
         target_id = int(data.split("_")[2])
         try:
-            await query.edit_message_caption(caption=query.message.caption + f"{E_CANCEL} <b>Subscription Rejected!</b>", parse_mode="HTML")
+            await query.edit_message_caption(caption=query.message.caption + f"\n\n{E_CANCEL} <b>Subscription Rejected!</b>", parse_mode="HTML")
         except Exception:
             pass
         try:
@@ -1087,8 +1115,9 @@ def main():
     # Subscription Flow Handler
     sub_conv = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(sub_start_5, pattern="^buy_sub_5$"),
-            CallbackQueryHandler(sub_start_7, pattern="^buy_sub_7$")
+            CallbackQueryHandler(sub_start_3, pattern="^buy_sub_3$"),
+            CallbackQueryHandler(sub_start_15, pattern="^buy_sub_15$"),
+            CallbackQueryHandler(sub_start_30, pattern="^buy_sub_30$")
         ],
         states={
             SUB_TXID: [MessageHandler(filters.TEXT & ~filters.COMMAND, sub_txid_received)],
