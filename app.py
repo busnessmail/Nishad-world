@@ -41,7 +41,7 @@ def get_bd_date_str():
 
 # Environment Variables & Config
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-VAK_SMS_API_KEY = os.getenv("VAK_SMS_API_KEY", "087d6bfb54884a7bbfd963a232add065")
+VAK_SMS_API_KEY = os.getenv("VAK_SMS_API_KEY", "91b1a1918e4c47c2a9accf9b19c9226d")
 
 # Support multiple admins (comma-separated string parsed into a list of ints)
 ADMIN_IDS_RAW = os.getenv("ADMIN_IDS", "123456789")
