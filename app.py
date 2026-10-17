@@ -303,7 +303,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     welcome_msg = (
         f"👋 <b>𝚆𝙴𝙻𝙲𝙾𝙼𝙴 WHATSAPP 𝙱𝙾𝚃!</b> {E_WELCOME}\n\n"
-        f"⚙️ <b>𝚃𝙶𝚂 𝚆𝙰 𝙽𝚄𝙼𝙱𝙴𝚁</b> {E_PHONE}"
+        f"⚙️ <b>HUNTER ZONE</b> {E_PHONE}"
     )
     await update.message.reply_text(welcome_msg, parse_mode="HTML", reply_markup=get_main_keyboard(user_id))
 
@@ -829,7 +829,7 @@ async def deposit_txid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cancel_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("❌ CANCEL DEPOSIT", callback_data="cancel_deposit")]
     ])
-    await update.message.reply_text("📸 <b>𝚂𝙴𝙽𝙳 𝙰 𝚂𝙲𝚁𝙴𝙴𝙽𝚂𝙷𝙾𝚃 𝙾𝙵 𝚃𝙷𝙴 𝙿𝙰𝚈𝙼𝙴𝙽𝚃:</b>", parse_mode="HTML", reply_markup=cancel_kb)
+    await update.message.reply_text("📸 <b>𝚂𝙴𝙽𝙳 𝙰 𝚂𝙲𝚁𝙴𝙴𝙽𝚂𝙷𝙾𝚃 𝙾𝙵 𝚃𝙷𝙴 𝙿𝙰𝚈𝙼𝙴𝙽𝚃:</b>", parse_mode="HTML", reply_markup=cancel_]
     return WAITING_SCREENSHOT
 
 async def deposit_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1071,7 +1071,7 @@ async def handle_sub_approval_callbacks(update: Update, context: ContextTypes.DE
     elif data.startswith("reject_sub_"):
         target_id = int(data.split("_")[2])
         try:
-            await query.edit_message_caption(caption=query.message.caption + f"\n\n{E_CANCEL} <b>Subscription Rejected!</b>", parse_mode="HTML")
+            await query.edit_message_caption(caption=query.message.caption + f"{E_CANCEL} <b>Subscription Rejected!</b>", parse_mode="HTML")
         except Exception:
             pass
         try:
