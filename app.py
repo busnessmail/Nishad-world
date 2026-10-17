@@ -63,7 +63,7 @@ users_col = db["users"]
 settings_col = db["settings"]
 deposits_col = db["pending_deposits"]
 daily_stats_col = db["daily_stats"]  
-daily_sub_stats_col = db["daily_sub_stats"]  # নতুন কালেকশন ডেইলি সাবস্ক্রিপশন স্ট্যাটস এর জন্য
+daily_sub_stats_col = db["daily_sub_stats"]  
 
 # Helper Emoji Generator Function (Telegram Custom Emojis)
 def emoji(emoji_id: str, fallback: str = "✨") -> str:
@@ -117,7 +117,9 @@ SUB_DAYS, SUB_TXID, SUB_SCREENSHOT = range(3, 6)
     ADMIN_RATE_WA_CL_SET,
     ADMIN_RATE_WA_HK_SET,
     ADMIN_BROADCAST,
-) = range(6, 14)
+    ADMIN_ADD_SUB_USER,
+    ADMIN_ADD_SUB_TIME,
+) = range(6, 16)
 
 # Helper Functions
 def is_admin(user_id: int) -> bool:
@@ -323,7 +325,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     welcome_msg = (
         f"👋 <b>𝚆𝙴𝙻𝙲𝙾𝙼𝙴 WHATSAPP 𝙱𝙾𝚃!</b> {E_WELCOME}\n\n"
-        f"⚙️ <b>HUNTER ZONE NUMBER</b> {E_PHONE}"
+        f"⚙️ <b>𝗦𝗦 𝗩𝗜𝗥𝗧𝗨𝗔𝗟 𝗡𝗨𝗠𝗕𝗘𝗥 𝗕𝗢𝗧</b> {E_PHONE}"
     )
     await update.message.reply_text(welcome_msg, parse_mode="HTML", reply_markup=get_main_keyboard(user_id))
 
@@ -552,9 +554,10 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         admin_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("🚫 BAN USER", callback_data="admin_ban"), InlineKeyboardButton("✅ UNBAN USER", callback_data="admin_unban")],
             [InlineKeyboardButton("➕ ADD BALANCE", callback_data="admin_add_bal"), InlineKeyboardButton("🧹 ZERO BALANCE", callback_data="admin_zero_bal")],
+            [InlineKeyboardButton("➕ ADD SUB (Manual)", callback_data="admin_add_sub")],
             [InlineKeyboardButton("🧹 ZERO ALL BALANCES", callback_data="admin_zero_all_bal")],
             [InlineKeyboardButton("📊 VIEW USERS", callback_data="admin_view_users"), InlineKeyboardButton("📈 DAILY STATS", callback_data="admin_daily_stats")],
-            [InlineKeyboardButton("💰 SUBSCRIPTION STATS", callback_data="admin_sub_stats")],
+            [InlineKeyboardButton("💰 SUBSCRIPTION STATS", callback_data="admin_sub_stats"), InlineKeyboardButton("🏆 TOP OTP RECEIVED", callback_data="admin_top_otp")],
             [InlineKeyboardButton("⚙️ SET CHILE RATE", callback_data="admin_set_rate_cl"), InlineKeyboardButton("⚙️ SET HK RATE", callback_data="admin_set_rate_hk")],
             [InlineKeyboardButton("💥 RESET ALL SUBSCRIPTIONS", callback_data="admin_reset_all_subs")],
             [InlineKeyboardButton(f"🤖 BOT STATUS: {status_text}", callback_data="admin_toggle_bot")],
@@ -610,9 +613,10 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
             admin_kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton("🚫 BAN USER", callback_data="admin_ban"), InlineKeyboardButton("✅ UNBAN USER", callback_data="admin_unban")],
                 [InlineKeyboardButton("➕ ADD BALANCE", callback_data="admin_add_bal"), InlineKeyboardButton("🧹 ZERO BALANCE", callback_data="admin_zero_bal")],
+                [InlineKeyboardButton("➕ ADD SUB (Manual)", callback_data="admin_add_sub")],
                 [InlineKeyboardButton("🧹 ZERO ALL BALANCES", callback_data="admin_zero_all_bal")],
                 [InlineKeyboardButton("📊 VIEW USERS", callback_data="admin_view_users"), InlineKeyboardButton("📈 DAILY STATS", callback_data="admin_daily_stats")],
-                [InlineKeyboardButton("💰 SUBSCRIPTION STATS", callback_data="admin_sub_stats")],
+                [InlineKeyboardButton("💰 SUBSCRIPTION STATS", callback_data="admin_sub_stats"), InlineKeyboardButton("🏆 TOP OTP RECEIVED", callback_data="admin_top_otp")],
                 [InlineKeyboardButton("⚙️ SET CHILE RATE", callback_data="admin_set_rate_cl"), InlineKeyboardButton("⚙️ SET HK RATE", callback_data="admin_set_rate_hk")],
                 [InlineKeyboardButton("💥 RESET ALL SUBSCRIPTIONS", callback_data="admin_reset_all_subs")],
                 [InlineKeyboardButton(f"🤖 BOT STATUS: {status_text}", callback_data="admin_toggle_bot")],
@@ -672,6 +676,21 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
                     f"💵 <b>Total Amount:</b> <code>{tot_amt:.2f}</code> BDT\n"
                     f"----------------------------\n"
                 )
+
+            await query.message.reply_text(msg, parse_mode="HTML")
+
+        elif data == "admin_top_otp":
+            top_users = list(users_col.find({}).sort("otp_count", -1).limit(10))
+            if not top_users:
+                await query.message.reply_text("🏆 <b>NO USER DATA FOUND YET.</b>", parse_mode="HTML")
+                return
+
+            msg = "🏆 <b>TOP 10 USERS BY OTP RECEIVED:</b>\n\n"
+            for idx, u in enumerate(top_users, 1):
+                name = u.get("full_name", "N/A")
+                uid = u.get("user_id")
+                cnt = u.get("otp_count", 0)
+                msg += f"<b>{idx}.</b> {name} (ID: <code>{uid}</code>) — <b>{cnt}</b> OTPs\n"
 
             await query.message.reply_text(msg, parse_mode="HTML")
 
@@ -749,6 +768,10 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         elif data == "admin_zero_bal":
             await query.message.reply_text("SEND USER ID TO ZERO BALANCE:")
             return ADMIN_ZERO_BAL_USER
+
+        elif data == "admin_add_sub":
+            await query.message.reply_text("SEND USER ID TO ADD SUBSCRIPTION:")
+            return ADMIN_ADD_SUB_USER
 
         elif data == "admin_set_rate_cl":
             curr_rate = get_rate("cl")
@@ -1032,6 +1055,61 @@ async def admin_add_bal_amt_process(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_text("❌ INVALID AMOUNT.")
     return ConversationHandler.END
 
+async def admin_add_sub_user_process(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        target_id = int(update.message.text)
+        context.user_data["target_sub_user_id"] = target_id
+        await update.message.reply_text("⏳ <b>সময় দিন (যেমন: 30m, 5h, 7d):</b>\n(m = মিনিট, h = ঘণ্টা, d = দিন)", parse_mode="HTML")
+        return ADMIN_ADD_SUB_TIME
+    except ValueError:
+        await update.message.reply_text("❌ INVALID USER ID.")
+        return ConversationHandler.END
+
+async def admin_add_sub_time_process(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip().lower()
+    target_id = context.user_data.get("target_sub_user_id")
+    
+    match = re.match(r"^(\d+)([mhd])$", text)
+    if not match:
+        await update.message.reply_text("❌ ভুল ফরম্যাট! যেমন লিখুন: 30m অথবা 5h অথবা 7d")
+        return ADMIN_ADD_SUB_TIME
+        
+    val = int(match.group(1))
+    unit = match.group(2)
+    
+    now = get_bd_time().replace(tzinfo=None)
+    user = get_user(target_id)
+    current_expiry = user.get("subscription_expiry") if user else None
+    
+    base_time = current_expiry if (current_expiry and current_expiry > now) else now
+    
+    if unit == "m":
+        delta = timedelta(minutes=val)
+    elif unit == "h":
+        delta = timedelta(hours=val)
+    elif unit == "d":
+        delta = timedelta(days=val)
+    else:
+        delta = timedelta(days=val)
+        
+    new_expiry = base_time + delta
+    users_col.update_one({"user_id": target_id}, {"$set": {"subscription_expiry": new_expiry}})
+    
+    exp_str = new_expiry.strftime("%Y-%m-%d %H:%M")
+    await update.message.reply_text(f"✅ সফলভাবে User <code>{target_id}</code>-এর সাবস্ক্রিপশন মেয়াদ বাড়িয়ে দেওয়া হয়েছে।\n📅 নতুন মেয়াদ: <code>{exp_str}</code> (BD Time)", parse_mode="HTML")
+    
+    try:
+        await context.bot.send_message(
+            chat_id=target_id,
+            text=f"🎉 <b>অ্যাডমিন আপনার সাবস্ক্রিপশন মেয়াদ আপডেট করেছেন!</b>\n📅 নতুন মেয়াদ: <code>{exp_str}</code> (BD Time)",
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard(target_id)
+        )
+    except Exception:
+        pass
+        
+    return ConversationHandler.END
+
 async def admin_zero_bal_process(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         target_id = int(update.message.text)
@@ -1152,7 +1230,6 @@ async def handle_sub_approval_callbacks(update: Update, context: ContextTypes.DE
         expiry_date = get_bd_time().replace(tzinfo=None) + timedelta(days=days)
         users_col.update_one({"user_id": target_id}, {"$set": {"subscription_expiry": expiry_date}})
         
-        # সাবস্ক্রিপশন স্ট্যাটস এবং এমাউন্ট আপডেট (৩ দিন = ২০৳, ১৫ দিন = ১০০৳, ৩০ দিন = ১৭০৳)
         price_val = 20.0 if days == 3 else (100.0 if days == 15 else 170.0)
         increment_daily_sub_stat(days, price_val)
 
@@ -1242,6 +1319,8 @@ def main():
             ADMIN_RATE_WA_CL_SET: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_set_rate_cl_process)],
             ADMIN_RATE_WA_HK_SET: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_set_rate_hk_process)],
             ADMIN_BROADCAST: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_broadcast_process)],
+            ADMIN_ADD_SUB_USER: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_sub_user_process)],
+            ADMIN_ADD_SUB_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_sub_time_process)],
         },
         fallbacks=[]
     )
